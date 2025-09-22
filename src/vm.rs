@@ -1,7 +1,7 @@
 use crate::hardware::{self, CondtionalFlags, Registers};
 pub struct VM {
-    pub memory: [u16; hardware::MEMORY_MAX], // 65,536 memory locations
-    pub registers: [u16; hardware::Registers::R_COUNT as usize],   // R0-R7, PC, COND
+    memory: [u16; hardware::MEMORY_MAX], // 65,536 memory locations
+    registers: [u16; hardware::Registers::R_COUNT as usize],   // R0-R7, PC, COND
 }
 
 impl VM
@@ -27,13 +27,13 @@ impl VM
     pub fn register_read(&mut self,register:usize) -> u16
     {
         if register>Registers::R_COUNT as usize {panic!("Invalid register given");}
-        self.registers[register as usize]
+        self.registers[register]
     }
 
     pub fn register_write(&mut self,register:usize,value:u16)
     {
         if register>Registers::R_COUNT as usize {panic!("Invalid register given");}
-        self.registers[register as usize] = value;
+        self.registers[register] = value;
     }
     pub fn update_flags(&mut self,register_no:usize)
     {

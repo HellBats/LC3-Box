@@ -17,10 +17,11 @@ fn main() {
         exit(0);
     } 
     image::read_image(&args[0]);
-    vm.registers[Registers::R_PC as usize] = 0x3000;
+    vm.register_write(Registers::R_PC as usize, 0x3000);
     loop
     {
-        let instruction:u16 = vm.memory[vm.registers[Registers::R_PC as usize] as usize];
+        let instruction_register =  vm.register_read(Registers::R_PC as usize);
+        let instruction:u16 = vm.memory_read(instruction_register);
         let opcode = instruction>>12;
         OPCODE_TABLE[opcode as usize]();
     }
