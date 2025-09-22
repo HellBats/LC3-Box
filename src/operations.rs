@@ -1,10 +1,17 @@
 
-fn sign_extension(val:u16, bit_count:u8) -> u16
+use crate::hardware;
+use crate::vm::VM;
+use hardware::Registers;
+fn sign_extension(val: u16, bit_count: u8) -> u16
 {
-    (val>>bit_count-1)<<15 | val
+    let shift = 16 - bit_count;
+    (((val << shift) as i16) >> shift) as u16
 }
 fn OP_BR(){}
-fn OP_ADD(){}
+fn OP_ADD()
+{
+
+}
 fn OP_LD(){}
 fn OP_ST(){}
 fn OP_JSR(){}
@@ -41,3 +48,6 @@ pub const OPCODE_TABLE:[fn();16] =
     OP_LEA,    /* load effective address */
     OP_TRAP,  /* execute trap */
 ];
+
+#[cfg(test)]
+mod tests;

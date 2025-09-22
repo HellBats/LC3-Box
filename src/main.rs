@@ -1,24 +1,26 @@
-
+#![allow(warnings)]
 use std::{env, process::exit};
 mod hardware;
 mod image;
 mod operations;
+mod vm;
 
 use hardware::Registers;
 use operations::OPCODE_TABLE;
+
+use crate::vm::VM;
 fn main() {
-    let mut memory = [0;hardware::MEMORY_MAX];
-    let mut registers:[u16;Registers::R_COUNT as usize] = [0;Registers::R_COUNT as usize];
+    let mut vm = VM::new();
     let args:Vec<String> = env::args().collect();
     if args.len()>1
     {
         exit(0);
     } 
     image::read_image(&args[0]);
-    registers[Registers::R_PC as usize] = 0x3000;
+    vm.registers[Registers::R_PC as usize] = 0x3000;
     loop
     {
-        let instruction:u16 = memory[registers[Registers::R_PC as usize] as usize];
+        let instruction:u16 = vm.memory[vm.registers[Registers::R_PC as usize] as usize];
         let opcode = instruction>>12;
         OPCODE_TABLE[opcode as usize]();
     }
