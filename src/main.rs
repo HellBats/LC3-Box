@@ -20,9 +20,10 @@ fn main() {
     vm.register_write(Registers::R_PC as usize, 0x3000);
     loop
     {
-        let instruction_register =  vm.register_read(Registers::R_PC as usize);
+        let instruction_register =  vm.register_read(Registers::R_PC.into());
+        vm.register_write(Registers::R_PC.into(), instruction_register+1); // PC incremented
         let instruction:u16 = vm.memory_read(instruction_register);
         let opcode = instruction>>12;
-        OPCODE_TABLE[opcode as usize]();
+        OPCODE_TABLE[opcode as usize](instruction,&mut vm);
     }
 }

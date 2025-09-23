@@ -2,34 +2,91 @@
 use crate::hardware;
 use crate::vm::VM;
 use hardware::Registers;
+
+
 fn sign_extension(val: u16, bit_count: u8) -> u16
 {
     let shift = 16 - bit_count;
     (((val << shift) as i16) >> shift) as u16
 }
-fn OP_BR(){}
-fn OP_ADD()
+
+
+fn OP_BR(inst:u16,vm:&mut VM)
 {
-
+    let offset = sign_extension(inst, 9);
+    if ((inst>>9 & vm.register_read(Registers::R_COND.into()))!=0)
+    {
+        let pc = vm.register_read(Registers::R_PC.into());
+        vm.register_write(Registers::R_PC.into(), ((pc as i16) + (offset as i16)) as u16);
+    }
 }
-fn OP_LD(){}
-fn OP_ST(){}
-fn OP_JSR(){}
-fn OP_AND(){}
-fn OP_LDR(){}
-fn OP_STR(){}
-fn OP_RTI(){}
-fn OP_NOT(){}
-fn OP_LDI(){}
-fn OP_STI(){}
-fn OP_JMP(){}
-fn OP_RES(){}
-fn OP_LEA(){}
-fn OP_TRAP(){}
+
+
+fn OP_ADD(inst:u16,vm:&mut VM)
+{
+    let destination_register = (inst>>9 & 7 )as usize ;
+    let immidiate_bit = inst>>5 & 1;
+    let source_register1 = (inst>>6 & 7) as usize;
+    if immidiate_bit > 0
+    {
+        let immidiate = sign_extension(inst, 5);
+        let ans = (vm.register_read(source_register1) as i16 +
+        immidiate as i16) as u16;
+        vm.register_write(destination_register, ans);
+    }
+    else
+    {
+        let source_register2 = (inst & 7) as usize;
+        let ans = (vm.register_read(source_register1) as i16 +
+        vm.register_read(source_register2) as i16) as u16;
+        vm.register_write(destination_register, ans);
+    }
+    vm.update_flags(destination_register);
+}
+
+
+fn OP_LD(inst:u16,vm:&mut VM){}
+fn OP_ST(inst:u16,vm:&mut VM){}
+fn OP_JSR(inst:u16,vm:&mut VM){}
+
+
+fn OP_AND(inst:u16,vm:&mut VM)
+{
+    let destination_register = (inst>>9 & 7 )as usize ;
+    let immidiate_bit = inst>>5 & 1;
+    let source_register1 = (inst>>6 & 7) as usize;
+    if immidiate_bit > 0
+    {
+        let immidiate = sign_extension(inst, 5);
+        let ans = (vm.register_read(source_register1) as i16 &
+        immidiate as i16) as u16;
+        vm.register_write(destination_register, ans);
+    }
+    else
+    {
+        let source_register2 = (inst & 7) as usize;
+        let ans = (vm.register_read(source_register1) as i16 &
+        vm.register_read(source_register2) as i16) as u16;
+        vm.register_write(destination_register, ans);
+    }
+    vm.update_flags(destination_register);
+}
+
+
+fn OP_LDR(inst:u16,vm:&mut VM){}
+fn OP_STR(inst:u16,vm:&mut VM){}
+fn OP_RTI(inst:u16,vm:&mut VM){}
+fn OP_NOT(inst:u16,vm:&mut VM){}
+fn OP_LDI(inst:u16,vm:&mut VM){}
+fn OP_STI(inst:u16,vm:&mut VM){}
+fn OP_JMP(inst:u16,vm:&mut VM){}
+fn OP_RES(inst:u16,vm:&mut VM){}
+fn OP_LEA(inst:u16,vm:&mut VM){}
+fn OP_TRAP(inst:u16,vm:&mut VM){}
 
 
 
-pub const OPCODE_TABLE:[fn();16] = 
+pub const OPCODE_TABLE:[fn(inst:u16,vm:&mut VM);16] = 
 [
     OP_BR, /* branch */
     OP_ADD,    /* add  */

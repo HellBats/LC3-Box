@@ -19,3 +19,9 @@ pub enum CondtionalFlags {
     FL_ZRO = 1 << 1, /* Z */
     FL_NEG = 1 << 2, /* N */
 }
+
+impl From<Registers> for usize {
+    fn from(reg: Registers) -> Self {
+        reg as usize
+    }
+}
