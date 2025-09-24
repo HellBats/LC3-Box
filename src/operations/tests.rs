@@ -5,6 +5,61 @@ fn as_i16(v: u16) -> i16
     v as i16
 }
 
+// ---------------- Update Flags OPERATION ----------------
+
+#[test]
+fn test_update_flags_zero() {
+    let mut vm = VM::new();
+    vm.register_write(0, 0); // R0 = 0
+    vm.update_flags(0);
+
+    assert_eq!(
+        vm.register_read(Registers::R_COND.into()),
+        CondtionalFlags::FL_ZRO as u16,
+        "Zero flag not set correctly"
+    );
+}
+
+#[test]
+fn test_update_flags_positive() {
+    let mut vm = VM::new();
+    vm.register_write(1, 123); // R1 = positive number
+    vm.update_flags(1);
+
+    assert_eq!(
+        vm.register_read(Registers::R_COND.into()),
+        CondtionalFlags::FL_POS as u16,
+        "Positive flag not set correctly"
+    );
+}
+
+#[test]
+fn test_update_flags_negative() {
+    let mut vm = VM::new();
+    vm.register_write(2, 0x8000); // R2 = 1000_0000_0000_0000 (MSB=1)
+    vm.update_flags(2);
+
+    assert_eq!(
+        vm.register_read(Registers::R_COND.into()),
+        CondtionalFlags::FL_NEG as u16,
+        "Negative flag not set correctly"
+    );
+}
+
+#[test]
+fn test_update_flags_negative_custom_value() {
+    let mut vm = VM::new();
+    vm.register_write(3, 0xFFFF); // R3 = -1 in two’s complement
+    vm.update_flags(3);
+
+    assert_eq!(
+        vm.register_read(Registers::R_COND.into()),
+        CondtionalFlags::FL_NEG as u16,
+        "Negative flag not set for -1"
+    );
+}
+
+
 // ---------------- SIGN EXTENSION ----------------
 
 #[test]
@@ -194,4 +249,171 @@ fn test_br_wraparound() {
 
     // PC should wrap around to 0xFFFF
     assert_eq!(vm.register_read(Registers::R_PC.into()), 0xFFFF);
+}
+
+// ---------------- JMP & RET OPERATION ----------------
+
+#[test]
+fn test_jmp()
+{
+    let mut vm = VM::new();
+    vm.register_write(Registers::R_PC.into(), 0x3000);
+    vm.register_write(Registers::R_R1.into(), 0x4000); // Jump to this address
+
+    let inst = 0b1100_000_001_000000;
+    OP_JMP(inst, &mut vm);
+    assert_eq!(vm.register_read(Registers::R_PC.into()),0x4000);
+}
+
+#[test]
+fn test_jmp_ret()
+{
+    let mut vm = VM::new();
+    vm.register_write(Registers::R_PC.into(), 0x4000);
+    vm.register_write(Registers::R_R7.into(), 0x3000); // Jump to this address
+
+    let inst = 0b1100_000_111_000000;
+    OP_JMP(inst, &mut vm);
+    assert_eq!(vm.register_read(Registers::R_PC.into()),0x3000);
+}
+
+#[test]
+fn test_jmp_wrong_register()
+{
+    let mut vm = VM::new();
+    vm.register_write(Registers::R_PC.into(), 0x4000);
+    vm.register_write(Registers::R_R6.into(), 0x3000); // Jump to this address
+
+    let inst = 0b1100_000_001_000000;
+    OP_JMP(inst, &mut vm);
+    assert_ne!(vm.register_read(Registers::R_PC.into()),0x3000);
+}
+
+
+
+// ---------------- JSR & JSRR OPERATION ----------------
+
+#[test]
+fn test_jsr_positive_offset() {
+    let mut vm = VM::new();
+    vm.register_write(Registers::R_PC.into(), 0x3000);
+
+    // JSR with offset = +5
+    // opcode=0100, bit[11]=1, offset=0000000101
+    let inst = 0b0100_1_00000000101;
+
+    OP_JSR(inst, &mut vm);
+
+    // R7 should contain old PC
+    assert_eq!(vm.register_read(Registers::R_R7.into()), 0x3000);
+    // PC should be old PC + 5
+    assert_eq!(vm.register_read(Registers::R_PC.into()), 0x3005);
+}
+
+#[test]
+fn test_jsr_negative_offset() {
+    let mut vm = VM::new();
+    vm.register_write(Registers::R_PC.into(), 0x3000);
+
+    // JSR with offset = -2 (11111111110 in 11-bit)
+    let inst = 0b0100_1_11111111110;
+
+    OP_JSR(inst, &mut vm);
+
+    assert_eq!(vm.register_read(Registers::R_R7.into()), 0x3000);
+    assert_eq!(vm.register_read(Registers::R_PC.into()), 0x2FFE);
+}
+
+#[test]
+fn test_jsrr() {
+    let mut vm = VM::new();
+    vm.register_write(Registers::R_PC.into(), 0x3000);
+    vm.register_write(3, 0x4000); // baseR=R3
+
+    // JSRR with baseR=3
+    // opcode=0100, bit[11]=0, baseR=011
+    let inst = 0b0100_0_000_011_000000;
+
+    OP_JSR(inst, &mut vm);
+
+    assert_eq!(vm.register_read(Registers::R_R7.into()), 0x3000);
+    assert_eq!(vm.register_read(Registers::R_PC.into()), 0x4000);
+}
+
+
+// ---------------- LD OPERATION ----------------
+
+#[test]
+fn test_ld_zero_offset() {
+    let mut vm = VM::new();
+    vm.register_write(Registers::R_PC.into(), 0x3000);
+    vm.memory_write(0x3000, 0x1234);
+
+    // inst = opcode(0010) + DR=R1 + offset=0
+    let inst: u16 = 0b0010_001_000000000; 
+
+    OP_LD(inst, &mut vm);
+
+    assert_eq!(vm.register_read(Registers::R_R1.into()), 0x1234);
+    assert_eq!(vm.register_read(Registers::R_COND.into()), CondtionalFlags::FL_POS as u16);
+}
+
+#[test]
+fn test_ld_positive_offset() {
+    let mut vm = VM::new();
+    vm.register_write(Registers::R_PC.into(), 0x3000);
+    vm.memory_write(0x3005, 0xABCD);
+
+    // inst = opcode(0010) + DR=R2 + offset=+5
+    let inst: u16 = 0b0010_010_000000101; 
+
+    OP_LD(inst, &mut vm);
+
+    assert_eq!(vm.register_read(Registers::R_R2.into()), 0xABCD);
+    assert_eq!(vm.register_read(Registers::R_COND.into()), CondtionalFlags::FL_NEG as u16); 
+    // 0xABCD has MSB=1
+}
+
+#[test]
+fn test_ld_negative_offset() {
+    let mut vm = VM::new();
+    vm.register_write(Registers::R_PC.into(), 0x3005);
+    vm.memory_write(0x3000, 0x0000);
+
+    // inst = opcode(0010) + DR=R3 + offset=-5
+    let inst: u16 = 0b0010_011_111111011; // -5 in 9-bit two’s complement
+
+    OP_LD(inst, &mut vm);
+
+    assert_eq!(vm.register_read(Registers::R_R3.into()), 0x0000);
+    assert_eq!(vm.register_read(Registers::R_COND.into()), CondtionalFlags::FL_ZRO as u16);
+}
+
+#[test]
+fn test_ld_updates_flags_positive_value() {
+    let mut vm = VM::new();
+    vm.register_write(Registers::R_PC.into(), 0x3100);
+    vm.memory_write(0x3101, 42);
+
+    // inst = opcode(0010) + DR=R4 + offset=+1
+    let inst: u16 = 0b0010_100_000000001;
+
+    OP_LD(inst, &mut vm);
+
+    assert_eq!(vm.register_read(Registers::R_R4.into()), 42);
+    assert_eq!(vm.register_read(Registers::R_COND.into()), CondtionalFlags::FL_POS as u16);
+}
+
+// ---------------- NOT OPERATION ----------------
+
+#[test]
+fn test_not() {
+    let mut vm = VM::new();
+    vm.register_write(Registers::R_R1.into(), 0x00FF);
+
+    let inst: u16 = 0b1001_010_001_000001;
+
+    OP_NOT(inst, &mut vm);
+
+    assert_eq!(vm.register_read(Registers::R_R2.into()), 0xFF00);
 }
