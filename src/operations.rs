@@ -57,7 +57,14 @@ fn OP_LD(inst:u16,vm:&mut VM)
 }
 
 
-fn OP_ST(inst:u16,vm:&mut VM){}
+fn OP_ST(inst:u16,vm:&mut VM)
+{
+    let source_register = (inst>>9 & 7 ) as usize;
+    let offset = sign_extension(inst, 9) as i32;
+    let pc = vm.register_read(Registers::R_PC.into());
+    let value = vm.register_read(source_register);
+    vm.memory_write((pc as i32 + offset) as u16,value);
+}
 
 
 fn OP_JSR(inst:u16,vm:&mut VM)
@@ -104,8 +111,30 @@ fn OP_AND(inst:u16,vm:&mut VM)
 }
 
 
-fn OP_LDR(inst:u16,vm:&mut VM){}
-fn OP_STR(inst:u16,vm:&mut VM){}
+fn OP_LDR(inst:u16,vm:&mut VM)
+{
+    let destination_register = (inst>>9 & 7 ) as usize;
+    let offset = sign_extension(inst, 6) as i32;
+    let base_register = (inst>>6 & 7) as usize;
+    let base_address = vm.register_read(base_register);
+    let value = vm.memory_read((base_address as i32 + offset) as u16);
+    vm.register_write(destination_register , value);
+    vm.update_flags(destination_register);
+}
+
+
+
+fn OP_STR(inst:u16,vm:&mut VM)
+{
+    let source_register = (inst>>9 & 7 ) as usize;
+    let offset = sign_extension(inst, 6) as i32;
+    let base_register = (inst>>6 & 7) as usize;
+    let base_address = vm.register_read(base_register);
+    let value = vm.register_read(source_register);
+    vm.memory_write((base_address as i32 + offset) as u16,value);
+}
+
+
 fn OP_RTI(inst:u16,vm:&mut VM){}
 
 
@@ -117,8 +146,27 @@ fn OP_NOT(inst:u16,vm:&mut VM)
 }
 
 
-fn OP_LDI(inst:u16,vm:&mut VM){}
-fn OP_STI(inst:u16,vm:&mut VM){}
+fn OP_LDI(inst:u16,vm:&mut VM)
+{
+    let destination_register = (inst>>9 & 7 ) as usize;
+    let offset = sign_extension(inst, 9) as i32;
+    let pc = vm.register_read(Registers::R_PC.into());
+    let address = vm.memory_read((pc as i32 + offset) as u16);
+    let value = vm.memory_read(address);
+    vm.register_write(destination_register , value);
+    vm.update_flags(destination_register);
+}
+
+
+fn OP_STI(inst:u16,vm:&mut VM)
+{
+    let source_register = (inst>>9 & 7 ) as usize;
+    let offset = sign_extension(inst, 9) as i32;
+    let pc = vm.register_read(Registers::R_PC.into());
+    let address = vm.memory_read((pc as i32 + offset) as u16);
+    let value = vm.register_read(source_register);
+    vm.memory_write(address,value);
+}
 
 
 fn OP_JMP(inst:u16,vm:&mut VM)
@@ -129,9 +177,29 @@ fn OP_JMP(inst:u16,vm:&mut VM)
 }
 
 
-fn OP_RES(inst:u16,vm:&mut VM){}
-fn OP_LEA(inst:u16,vm:&mut VM){}
-fn OP_TRAP(inst:u16,vm:&mut VM){}
+fn OP_RES(inst:u16,vm:&mut VM)
+{
+    panic!("Illegal Opcode");
+}
+
+
+fn OP_LEA(inst:u16,vm:&mut VM)
+{
+    let destination_register = (inst>>9 & 7 ) as usize;
+    let offset = sign_extension(inst, 9) as i32;
+    let pc = vm.register_read(Registers::R_PC.into());
+    let value = (pc as i32 + offset) as u16;
+    vm.register_write(destination_register , value);
+    vm.update_flags(destination_register);
+}
+
+
+fn OP_TRAP(inst:u16,vm:&mut VM)
+{
+    let pc = vm.register_read(Registers::R_PC.into());
+    vm.register_write(Registers::R_R7.into(), pc);
+    vm.register_write(Registers::R_PC.into(),inst & 255);
+}
 
 
 
