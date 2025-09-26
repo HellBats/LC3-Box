@@ -1,9 +1,11 @@
 
 use crate::hardware;
 use crate::vm::VM;
+use crate::traps::Traps;
 use hardware::Registers;
 use hardware::CondtionalFlags;
-
+use std::io;
+use std::io::Read;
 
 fn sign_extension(val: u16, bit_count: u8) -> u16
 {
@@ -135,7 +137,10 @@ fn OP_STR(inst:u16,vm:&mut VM)
 }
 
 
-fn OP_RTI(inst:u16,vm:&mut VM){}
+fn OP_RTI(inst:u16,vm:&mut VM)
+{
+    
+}
 
 
 fn OP_NOT(inst:u16,vm:&mut VM)
@@ -198,7 +203,65 @@ fn OP_TRAP(inst:u16,vm:&mut VM)
 {
     let pc = vm.register_read(Registers::R_PC.into());
     vm.register_write(Registers::R_R7.into(), pc);
-    vm.register_write(Registers::R_PC.into(),inst & 255);
+    let instr = (inst & 0xFF).into(); 
+    match (instr)
+    {
+        Traps::TRAP_GETC => 
+        {
+            let mut buffer = [0u8; 1];
+            // read one byte from stdin (line-buffered: requires Enter)
+            io::stdin().read_exact(&mut buffer).unwrap();
+            vm.register_write(Registers::R_R0.into(), buffer[0] as u16);
+
+            vm.update_flags(Registers::R_R0.into());
+        }
+        Traps::TRAP_OUT => 
+        {
+            let character = vm.register_read(Registers::R_R0.into());
+            print!("{character}");
+        }
+        Traps::TRAP_PUTS => 
+        {
+            let mut base_address = vm.register_read(Registers::R_R0.into());
+            loop 
+            {
+                let chr = vm.memory_read(base_address) as u8;
+                if chr == 0  {break;}
+                print!("{}",chr as char);
+                base_address+=1;
+            }
+        }
+        Traps::TRAP_IN => 
+        {
+            println!("Enter a single character: ");
+            let mut buffer = [0u8; 1];
+            // read one byte from stdin (line-buffered: requires Enter)
+            io::stdin().read_exact(&mut buffer).unwrap();
+            vm.register_write(Registers::R_R0.into(), buffer[0] as u16);
+            vm.update_flags(Registers::R_R0.into());
+            print!("{}",buffer[0]);
+        }
+        Traps::TRAP_PUTSP => 
+        {
+            let base_address = vm.register_read(Registers::R_R0.into());
+            loop 
+            {
+                let chrs = vm.memory_read(base_address);
+                let ch1 = (chrs & 255) as u8;
+                if ch1 == 0  {break;}
+                print!("{}",ch1 as char);
+                let ch2 = (chrs>>8) as u8;
+                if ch1 == 0  {break;}
+                print!("{}",ch1 as char);
+            }
+        }
+        Traps::TRAP_HALT => 
+        {
+            println!("VM HAlted");
+            vm.state_change();
+        }
+        Traps::TRAP_INVALID  => {panic!("asd");}
+    }
 }
 
 

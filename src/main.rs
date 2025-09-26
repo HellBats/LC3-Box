@@ -4,6 +4,7 @@ mod hardware;
 mod image;
 mod operations;
 mod vm;
+mod traps;
 
 use hardware::Registers;
 use operations::OPCODE_TABLE;
@@ -16,7 +17,7 @@ fn main() {
     {
         exit(0);
     } 
-    image::read_image(&args[0]);
+    image::read_image(&args[0],&mut vm);
     vm.register_write(Registers::R_PC as usize, 0x3000);
     loop
     {

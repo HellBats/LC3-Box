@@ -1,5 +1,6 @@
 use crate::hardware::{self, CondtionalFlags, Registers};
 pub struct VM {
+    state:bool,
     memory: [u16; hardware::MEMORY_MAX], // 65,536 memory locations
     registers: [u16; hardware::Registers::R_COUNT as usize],   // R0-R7, PC, COND
 }
@@ -10,6 +11,7 @@ impl VM
     {
         Self
         {
+            state: true,
             memory: [0;hardware::MEMORY_MAX],
             registers: [0; hardware::Registers::R_COUNT as usize]
         }
@@ -49,5 +51,9 @@ impl VM
         {
             CondtionalFlags::FL_POS as u16
         }
+    }
+    pub fn state_change(&mut self)
+    {
+        self.state = !self.state
     }
 }
