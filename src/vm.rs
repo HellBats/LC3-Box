@@ -1,4 +1,7 @@
-use crate::hardware::{self, CondtionalFlags, Registers};
+use crate::hardware::{self, CondtionalFlags, Registers,Memory_Mapped_registers::MR_KBDR,Memory_Mapped_registers::MR_KBSR};
+use std::io;
+use std::io::Read;
+use crate::input_buffering::check_key;
 pub struct VM {
     state:bool,
     memory: [u16; hardware::MEMORY_MAX], // 65,536 memory locations
@@ -19,6 +22,21 @@ impl VM
 
     pub fn memory_read(&mut self,address:u16) -> u16
     {
+        if (address == (MR_KBSR as u16))
+        {
+            if (check_key())
+            {
+                self.memory_write(MR_KBSR as u16,  1<< 15);
+                let mut buffer = [0u8; 1];
+                // read one byte from stdin (line-buffered: requires Enter)
+                io::stdin().read_exact(&mut buffer).unwrap();
+                self.memory_write(MR_KBDR as u16,  buffer[0] as u16);
+            }
+            else
+            {
+                self.memory_write(MR_KBSR as u16,  0);
+            }
+        }
         self.memory[address as usize]
     }
 
@@ -55,5 +73,9 @@ impl VM
     pub fn state_change(&mut self)
     {
         self.state = !self.state
+    }
+    pub fn state_read(&self) -> bool
+    {
+        self.state
     }
 }

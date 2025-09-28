@@ -30,6 +30,14 @@ pub enum CondtionalFlags {
     FL_NEG = 1 << 2, /* N */
 }
 
+
+pub enum Memory_Mapped_registers
+{
+    MR_KBSR = 0xFE00, /* keyboard status */
+    MR_KBDR = 0xFE02  /* keyboard data */
+}
+
+
 impl From<Registers> for usize {
     fn from(reg: Registers) -> Self {
         reg as usize
